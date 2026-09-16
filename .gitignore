@@ -1,0 +1,108 @@
+# ============================================================
+# MuleSoft / Anypoint Studio
+# ============================================================
+
+# Anypoint Studio metadata
+.metadata/
+.studio/
+.settings/
+.project
+.classpath
+
+# Mule Studio
+*.launch
+
+# Anypoint Studio generated files
+target/
+bin/
+
+# Mule application generated files
+*.log
+logs/
+
+# ============================================================
+# Maven
+# ============================================================
+
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# Maven wrapper
+.mvn/timing.properties
+
+# ============================================================
+# Java
+# ============================================================
+
+*.class
+*.jar
+*.war
+*.ear
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+
+# ============================================================
+# Operating System
+# ============================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+
+# ============================================================
+# Temporary files
+# ============================================================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.backup
+
+# ============================================================
+# Environment / Secrets
+# ============================================================
+
+# Local environment files
+.env
+.env.*
+
+# Local Mule configuration containing secrets
+**/local.properties
+**/local-*.yaml
+**/local-*.yml
+
+# Secure properties - DO NOT commit real secrets
+**/*.secure.properties
+**/*-secure.properties
+
+# ============================================================
+# Mule Runtime / Studio generated files
+# ============================================================
+
+.mule/
+.mule.runtime/
+mule-artifact.json.bak
+
+# ============================================================
+# Test / Coverage
+# ============================================================
+
+coverage/
+*.exec
+*.coverage
+
+# MUnit generated reports
+**/munit-reports/
+**/surefire-reports/
