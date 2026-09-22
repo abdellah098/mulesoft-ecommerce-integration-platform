@@ -1,0 +1,8 @@
+<customer>
+  <id>9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e</id>
+  <name>Marc Lefevre</name>
+  <status>ACTIVE</status>
+  <isPartner>false</isPartner>
+  <email>marc.lefevre@example.com</email>
+  <phone>+33656789012</phone>
+</customer>

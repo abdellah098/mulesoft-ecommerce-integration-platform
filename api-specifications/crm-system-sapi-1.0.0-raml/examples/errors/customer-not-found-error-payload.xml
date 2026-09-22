@@ -1,0 +1,7 @@
+<error>
+  <code>404</code>
+  <message>Resource Not Found</message>
+  <description>The server has not found any customer matching the provided uri</description>
+  <dateTime>2026-05-05T10:20:00Z</dateTime>
+  <correlationId>c168afc3-e8ea-41dc-b999-4209bdbf947c</correlationId>
+</error>

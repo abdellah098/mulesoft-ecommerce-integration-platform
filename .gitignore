@@ -8,6 +8,11 @@
 .settings/
 .project
 .classpath
+.tooling/
+
+# IDE / editor metadata
+.vscode/
+.idea/
 
 # Mule Studio
 *.launch
