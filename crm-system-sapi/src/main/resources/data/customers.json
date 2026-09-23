@@ -1,0 +1,52 @@
+[ 
+  { 
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Jean Dupont",
+    "status": "ACTIVE",
+    "isPartner": true,
+    "email": "jean.dupont@example.com",
+    "phone": "+33612345678",
+    "createdAt": "2026-01-15T09:30:00Z",
+    "lastmodified": "2026-09-20T14:45:00Z" 
+  },
+  { 
+    "id": "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
+    "name": "Sophie Martin",
+    "status": "ACTIVE",
+    "isPartner": false,
+    "email": "sophie.martin@example.com",
+    "phone": "+33623456789",
+    "createdAt": "2026-02-03T11:15:00Z",
+    "lastmodified": "2026-09-18T10:20:00Z" 
+  },
+  { 
+    "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "name": "Thomas Bernard",
+    "status": "PAUSED",
+    "isPartner": true,
+    "email": "thomas.bernard@example.com",
+    "phone": "+33634567890",
+    "createdAt": "2026-03-10T08:00:00Z",
+    "lastmodified": "2026-09-15T16:30:00Z" 
+  },
+  { 
+    "id": "8f14e45f-ea7f-4c92-8f4a-2c1b3d5e6f70",
+    "name": "Claire Robert",
+    "status": "DELETED", 
+    "isPartner": false,
+    "email": "claire.robert@example.com", 
+    "phone": "+33645678901",
+    "createdAt": "2026-04-22T13:45:00Z",
+    "lastmodified": "2026-08-30T09:10:00Z" 
+  },
+  {
+    "id": "9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e",
+    "name": "Marc Lefevre",
+    "status": "ACTIVE",
+    "isPartner": true,
+    "email": "marc.lefevre@example.com",
+    "phone": "+33656789012",
+    "createdAt": "2026-05-05T10:20:00Z",
+    "lastmodified": "2026-09-21T12:00:00Z" 
+  } 
+]

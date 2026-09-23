@@ -19,16 +19,24 @@ output application/json
                     </ee:variables>
                 </ee:transform>
             </on-error-propagate>
-            <on-error-propagate type="APIKIT:NOT_FOUND">
-                <ee:transform doc:name="Transform Message">
+            <on-error-propagate type="CUSTOM:CUSTOMER_NOT_FOUND" enableNotifications="true" logException="true">
+                <ee:transform doc:name="Set Customer not Found Payload">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
-output application/json
+output application/xml
 ---
-{message: "Resource not found"}]]></ee:set-payload>
+{
+	error: {
+		code: vars.code,
+		message: error.errorType.identifier,
+		description: error.description,
+		dateTime: now() as String {format: "dd-MM-yyyy'T'HH:mm'Z'"},
+		correlationId: vars.correlationId
+	}
+}]]></ee:set-payload>
                     </ee:message>
                     <ee:variables>
-                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
                     </ee:variables>
                 </ee:transform>
             </on-error-propagate>

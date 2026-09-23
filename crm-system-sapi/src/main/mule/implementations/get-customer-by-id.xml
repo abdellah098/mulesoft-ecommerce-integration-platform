@@ -1,27 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-<flow name="get:\customers\(customerId):crm-system-sapi-config">
-    <ee:transform doc:name="Transform Message">
-        <ee:message>
-            <ee:set-payload><![CDATA[%dw 2.0
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="get:\customers\(customerId):crm-system-sapi-config">
+    <set-variable value="#[attributes.uriParams.customerId]" doc:name="Parse CustomerId" doc:id="72e05c68-e6e4-4e3a-ab7e-2a6930b09cdd" variableName="customerId"/>
+		<ee:transform doc:name="Set TransactionId And CorrelationId" doc:id="57a61c20-d3c6-486d-a430-b127ed6073a4" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="transactionId" ><![CDATA[attributes.headers."x-transaction-id" default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id' default vars.customerId]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Star tLog" doc:id="91b12684-8c59-4d6c-b439-598056572aa5" message='TransactionId: #[vars.transactionId] CorrelationId: #[vars.correlationId] message: "Start get customer by id flow"' />
+		<file:read doc:name="Load customers" doc:id="5d1a6c66-8a07-48c5-93ec-86ad60b38fab" config-ref="File_Config" path="#[p('app.home') ++ &quot;/data/customers.json&quot;]" outputMimeType="application/json" target="customers"/>
+		<ee:transform doc:name="Search Customer" doc:id="e1667a0e-66df-4b8d-ae94-4b6cce76edcb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var matchedCustomer = (vars.customers filter ((customer, index) -> customer.id == vars.customerId))
+[0] default null
+---
+
+matchedCustomer]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="8b9082ab-5bf0-4232-985c-50adcdc1e973" >
+			<when expression="#[not isEmpty(payload)]">
+				<ee:transform doc:name="Prepare Response" doc:id="e5dc0a84-8c3a-442f-a78d-4175b6d4235d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
 output application/xml
 ---
 {
-  customer: {
-    id: "9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e",
-    name: "Marc Lefevre",
-    status: "ACTIVE",
-    isPartner: "false",
-    email: "marc.lefevre@example.com",
-    phone: "+33656789012"
-  }
-} as Object {encoding: "UTF-8", mediaType: "application/xml"}]]></ee:set-payload>
-        </ee:message>
-    </ee:transform>
+	customer: {
+		id: payload.id,
+		name: payload.name,
+		status: payload.status,
+		email: payload.email,
+		phone: payload.phone
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<raise-error doc:name="Raise Customer Not Found Error" doc:id="050e2f10-56e9-4e19-b2b0-d7d9001e464f" type="CUSTOM:CUSTOMER_NOT_FOUND" description="The requested customer is not found"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="End Log" doc:id="965a26c3-0eb7-4f99-ad12-8d872fe7eafd" message='TransactionId #[vars.transactionId] CorrelationId: #[vars.correlationId] message: "Get Customer flow completed"'/>
 </flow>
 	</mule>
