@@ -16,7 +16,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id' default vars.customerId]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<logger level="INFO" doc:name="Star tLog" doc:id="91b12684-8c59-4d6c-b439-598056572aa5" message='TransactionId: #[vars.transactionId] CorrelationId: #[vars.correlationId] message: "Start get customer by id flow"' />
+		<logger level="INFO" doc:name="Start Log" doc:id="91b12684-8c59-4d6c-b439-598056572aa5" message='TransactionId: #[vars.transactionId] CorrelationId: #[vars.correlationId] message: "Start get customer by id flow"' />
 		<file:read doc:name="Load customers" doc:id="5d1a6c66-8a07-48c5-93ec-86ad60b38fab" config-ref="File_Config" path="#[p('app.home') ++ &quot;/data/customers.json&quot;]" outputMimeType="application/json" target="customers"/>
 		<ee:transform doc:name="Search Customer" doc:id="e1667a0e-66df-4b8d-ae94-4b6cce76edcb" >
 			<ee:message >
