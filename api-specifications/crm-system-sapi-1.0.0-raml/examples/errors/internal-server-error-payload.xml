@@ -1,7 +1,0 @@
-<error>
-  <code>500</code>
-  <message>Internal Server Error</message>
-  <description>Unexpected error occurs on the Server. Please try later</description>
-  <dateTime>2026-05-05T10:20:00Z</dateTime>
-  <correlationId>c168afc3-e8ea-41dc-b999-4209bdbf947c</correlationId>
-</error>
