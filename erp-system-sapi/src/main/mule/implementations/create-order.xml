@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	    <flow name="post:\orders:application\json:erp-system-sapi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  orderId: "ORD-10001",
+  status: "CREATED",
+  customerId: "CRM-001",
+  totalAmount: 2649.97,
+  currency: "EUR",
+  reservationId: "RES-88219",
+  items: [
+    {
+      productId: "PROD-001",
+      quantity: 2,
+      unitPrice: 1299.99,
+      totalPrice: 2599.98
+    }, 
+    {
+      productId: "PROD-002",
+      quantity: 1,
+      unitPrice: 49.99,
+      totalPrice: 49.99
+    }
+  ],
+  createAt: "2026-09-24T11:15:00Z"
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+	</mule>
