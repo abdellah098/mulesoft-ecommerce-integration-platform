@@ -11,6 +11,7 @@
             </http:error-response>
         </http:listener>
         <apikit:router config-ref="erp-system-sapi-config" />
+		<error-handler ref="gloabl-errors-handler" />
     </flow>
     <flow name="erp-system-sapi-console">
         <http:listener config-ref="erp-system-sapi-httpListenerConfig" path="/console/*">
