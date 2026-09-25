@@ -1,0 +1,62 @@
+#%RAML 1.0 DataType
+
+type: object
+properties:
+
+  orderId:
+    type: string
+    required: true
+    pattern: "^ORD-[0-9]{1,6}$"
+
+  status:
+    type: string
+    required: true
+    enum:
+      - CREATED
+      - SHIPPED
+      - CANCELLED
+
+  customerId:
+    type: string
+    required: true
+
+  totalAmount:
+    type: number
+    required: true
+
+  currency:
+    type: string
+    required: true
+    enum:
+      - EUR
+      - USD
+
+  reservationId:
+    type: string
+    required: true
+    pattern: "^RES-[0-9]{1,10}$"
+
+  items:
+    type: array
+    minItems: 1
+    required: true
+    items:
+      type: object
+      properties:
+        productId:
+          type: string
+          required: true
+          pattern: "^PROD-[0-9]{1,6}$"
+        quantity:
+          type: number
+          required: true
+        unitPrice:
+          type: number
+          required: true
+        totalPrice: 
+          type: number
+          required: true
+    
+  createAt:
+    type: datetime
+    required: true

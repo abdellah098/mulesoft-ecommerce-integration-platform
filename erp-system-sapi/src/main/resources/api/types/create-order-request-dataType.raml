@@ -1,0 +1,40 @@
+#%RAML 1.0 DataType
+
+type: object
+properties:
+  orderId:
+    type: string
+    required: true
+    pattern: "^ORD-[0-9]{1,6}$"
+
+  customerId:
+    type: string
+    required: true
+
+  items:
+    type: array
+    required: true
+    minItems: 1
+    items:
+      type: object
+      properties:
+        productId:
+          type: string
+          required: true
+          pattern: "^PROD-[0-9]{1,6}$"
+
+        quantity:
+          type: integer
+          required: true
+          minimum: 1
+
+        unitPrice:
+          type: number
+          required: true
+
+  currency:
+    type: string
+    required: true
+    enum:
+      - EUR
+      - USD

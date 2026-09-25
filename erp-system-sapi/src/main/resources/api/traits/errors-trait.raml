@@ -1,0 +1,27 @@
+#%RAML 1.0 Trait
+
+responses:
+    400:
+      description: Bad Request
+      body:
+        application/json:
+          type: !include  ../types/error-payload-dataType.raml
+          example: !include ../examples/errors/bad-request-error-payload.json
+    404:
+      description: Resource Not Found
+      body:
+        application/json:
+          type: !include  ../types/error-payload-dataType.raml
+          example: !include ../examples/errors/resource-notfound-error-payload.json
+    500:
+      description: Internal server error
+      body:
+        application/json:
+          type: !include ../types/error-payload-dataType.raml
+          example: !include ../examples/errors/internal-server-error-payload-api.json
+    503:
+      description: System connectivity failure
+      body:
+        application/json:
+          type: !include ../types/error-payload-dataType.raml
+          example: !include ../examples/errors/service-unavailable-error-payload.json

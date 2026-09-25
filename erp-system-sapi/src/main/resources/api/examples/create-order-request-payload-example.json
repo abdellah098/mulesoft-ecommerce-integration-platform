@@ -1,0 +1,17 @@
+{
+  "orderId": "ORD-10001",
+  "customerId": "CRM-001",
+  "items": [
+    {
+      "productId": "PROD-001",
+      "quantity": 2,
+      "unitPrice": 1299.99
+    },
+    {
+      "productId": "PROD-002",
+      "quantity": 1,
+      "unitPrice": 49.99
+    }
+  ],
+  "currency": "EUR"
+}

@@ -1,0 +1,12 @@
+[{
+  "productId": "PROD-001",
+  "name": "Sauvage Eau de Parfum 100ml",
+  "description": "Dior - Eau de parfum aux notes boisées et épicées",
+  "unitPrice": 1299.99,
+  "currency": "EUR",
+  "status": "ACTIVE",
+  "inventory": {
+    "availableQuantity": 8,
+    "reservedQuantity": 2
+  }
+}]

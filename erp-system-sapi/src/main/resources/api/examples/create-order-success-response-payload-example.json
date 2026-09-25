@@ -1,0 +1,23 @@
+{
+  "orderId": "ORD-10001",
+  "status": "CREATED",
+  "customerId": "CRM-001",
+  "totalAmount": 2649.97,
+  "currency": "EUR",
+  "reservationId": "RES-88219",
+  "items": [
+    {
+      "productId": "PROD-001",
+      "quantity": 2,
+      "unitPrice": 1299.99,
+      "totalPrice": 2599.98
+    },
+    {
+      "productId": "PROD-002",
+      "quantity": 1,
+      "unitPrice": 49.99,
+      "totalPrice": 49.99
+    }
+  ],
+  "createAt": "2026-09-24T11:15:00Z"
+}

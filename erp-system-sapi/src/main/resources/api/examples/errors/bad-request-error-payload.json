@@ -1,0 +1,7 @@
+{
+  "code": 400,
+  "message": "Bad Request",
+  "description": "The payload is invalid",
+  "dateTime": "2026-09-24T11:15:00Z",
+  "correlationId": "c39a8b12-872f-4e91-831d-192a5438ef90"
+}

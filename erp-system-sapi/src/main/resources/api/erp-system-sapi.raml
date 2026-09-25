@@ -1,0 +1,101 @@
+#%RAML 1.0
+title: erp-system-sapi
+baseUri: http://localhost:8081/api/v1/erp
+description: Products management ERP System
+version: 1.0.0
+protocols:
+  - HTTPS
+mediaType: 
+- application/json
+
+traits:
+  x-idempotency-key: !include traits/x-idempotency-key-trait.raml
+  x-correlation-id: !include traits/x-correlation-id-trait.raml
+  common-errors: !include traits/errors-trait.raml
+
+types:
+  CreateOrderRequestPayload: !include types/create-order-request-dataType.raml
+  CreateOrderSuccessResponsePayload: !include types/create-order-sucess-response-payload-dataType.raml
+  CancelOrderSuccessResponsePayload: !include types/cancel-order-success-response-datatype.raml
+  GetOrderSuccessResponsePayload: !include types/get-order-response-payload-dataType.raml
+  ProductPayload: !include types/get-product-response-payload-datatype.raml
+
+/orders:
+  post:
+    is: [x-correlation-id,x-idempotency-key, common-errors]
+    description: Create an reserve Commande
+    displayName: CreateOrder
+    body:
+       application/json:
+         type: CreateOrderRequestPayload
+         example: !include examples/create-order-request-payload-example.json
+    responses:
+      200:
+        description: Order successfully created
+        body:
+          application/json:
+            type: CreateOrderSuccessResponsePayload
+            example: !include examples/create-order-success-response-payload-example.json
+      409:
+        description: Stock Insuffisant 
+        body:
+          application/json:
+            type: !include types/error-payload-dataType.raml
+            example: !include examples/errors/stock-insuffisant-error-payload.json
+  /{orderId}:
+      uriParameters:
+        orderId:
+          type: string
+          required: true
+          pattern: "^ORD-[0-9]-{1,6}$"
+      /canccel:
+        post:
+          is: [x-correlation-id, common-errors]
+          description: Cancel Created Order
+          displayName: CancelOrder
+          responses:
+            200:
+              description: Order successfully canceled
+              body:
+                application/json:
+                  type: CancelOrderSuccessResponsePayload
+                  example: !include examples/cancel-order-success-response-payload.json
+      get:
+        is: [x-correlation-id, common-errors]
+        description: Get Order detail
+        displayName: GetOrder
+        responses:
+          200:
+            body:
+              application/json:
+                type: GetOrderSuccessResponsePayload
+                example: !include examples/get-order-response-payload.json
+            
+/products:
+  get:
+    is: [x-correlation-id, common-errors]
+    description: Get Products by ids
+    displayName: GetProducts
+    queryParameters:
+      ids:
+        type: array
+        required: true
+        minItems: 1
+        items:
+          type: integer
+    responses:
+      200:
+        body:
+          application/json:
+            type: ProductPayload[]
+            example: !include examples/get-products-response-payload.json
+      
+/check-health:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: {
+              "message": "I'am On"
+            }
