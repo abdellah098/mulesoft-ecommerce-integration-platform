@@ -57,7 +57,7 @@ output application/json
 	code: vars.httpStatus,
 	message: vars.message default error.errorType.identifier,
 	description: vars.description default error.description,
-	dateTime: now() as String {format: "yyyy:MM:dd'T'HH:mm:ss'Z'"},
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
 	"correlationId": vars.correlationId default attributes.headers.'x-correlation-id'
 }]]></ee:set-payload>
 				</ee:message>

@@ -142,5 +142,26 @@ output application/json
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="End Log" doc:id="bbb9e67b-465b-4755-b471-feca6c280d70" message='CorrelationId: #[vars.correlationId] IdempotencyId: #[vars.idempotencyKey] Message: "End Create order flow"'/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d2b3640a-9afc-45cd-80db-5c8700c7afc2" type="CUSTOM:INSUFFICIENT_STOCK">
+				<ee:transform doc:name="Prepare Payload" doc:id="2ffc6d9d-2437-4932-87fa-feb80977d127" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    code: 409,
+    message: error.message default error.errorType.identifier,
+    description: error.description,
+    dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+    correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[409]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
     </flow>
 	</mule>
