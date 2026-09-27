@@ -5,19 +5,10 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	        <error-handler>
+	<error-handler name="gloabl-errors-handler">
             <on-error-propagate type="APIKIT:BAD_REQUEST">
-                <ee:transform doc:name="Transform Message">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{message: "Bad request"}]]></ee:set-payload>
-                    </ee:message>
-                    <ee:variables>
-                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
-                    </ee:variables>
-                </ee:transform>
+                <set-variable value="400" doc:name="Set HTTP status - 400" doc:id="31c7c0eb-ff5d-4041-9f6a-8c6e8f695dac" variableName="httpStatus"/>
+			<flow-ref doc:name="Flow Reference" doc:id="9220715a-1f66-48ae-81cb-08c39c8ee170" name="prepare-error-payload"/>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:NOT_FOUND">
                 <ee:transform doc:name="Transform Message">
@@ -71,18 +62,35 @@ output application/json
                     </ee:variables>
                 </ee:transform>
             </on-error-propagate>
-            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
-                <ee:transform doc:name="Transform Message">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b7d29012-5836-4a0f-b334-ca86de821ee1" type="DB:CONNECTIVITY">
+			<set-variable value="503" doc:name="Set HTTP Status - 503" doc:id="6e6a3de4-4da5-4641-96a8-87cd7902f7e0" variableName="httpStatus" />
+			<set-variable value='#["Service unavailable"]' doc:name="Set Error Message" doc:id="01e78d0d-459a-4e9b-894e-8ab93d7cb268" variableName="message" />
+			<set-variable value='#["The (upstream) service is temporarily   not available"]' doc:name="Set Error Description" doc:id="8b7f66b5-c5d7-4fc7-84fb-beed7a4e7efd" variableName="errorDescription" />
+			<flow-ref doc:name="Flow Reference" doc:id="b3815261-6392-4420-977c-c4dd05fadbc4" name="prepare-error-payload"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="31be9b9d-9c29-4b9d-9edb-4e47749f8ae0" type="ANY">
+			<set-variable value="500" doc:name="Set HTTP Status -500" doc:id="179ffe05-a984-463e-aef9-e53825c63b84" variableName="httpStatus" />
+			<set-variable value='#["Internal Server Error"]' doc:name="Set Error Message" doc:id="5bce4d87-fd6d-4cf5-98de-948a0753c15c" variableName="message" />
+			<set-variable value='#[error.description default "An unexpected error occurs on the server"]' doc:name="set Error Description" doc:id="7d6b578a-646f-49fc-b1da-4dca5d09acf9" variableName="description" />
+			<flow-ref doc:name="Flow Reference" doc:id="b2a34a70-7894-4cec-bcc6-e1f1f4c482b9" name="prepare-error-payload" />
+		</on-error-propagate>
+        </error-handler>
+	<sub-flow name="prepare-error-payload" doc:id="6a5d01c1-03a9-4039-a251-d0695ab2944a">
+		<ee:transform doc:name="Transform Message" doc:id="bb566177-8152-464b-b68f-365efbafdb06">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{message: "Not Implemented"}]]></ee:set-payload>
-                    </ee:message>
-                    <ee:variables>
-                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
-                    </ee:variables>
-                </ee:transform>
-            </on-error-propagate>
-        </error-handler>
+{
+	code: vars.httpStatus,
+	message: vars.message default error.errorType.identifier,
+	description: vars.description default error.description,
+	dateTime: now() as String {format: "yyyy:MM:dd'T'HH:mm:ss'Z'"},
+	"correlationId": vars.correlationId default attributes.headers.'x-correlation-id'
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+				</ee:variables>
+			</ee:transform>
+	</sub-flow>
 	</mule>

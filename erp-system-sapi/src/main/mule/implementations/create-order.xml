@@ -1,40 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	    <flow name="post:\orders:application\json:erp-system-sapi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+
+	<flow name="post:\orders:application\json:erp-system-sapi-config">
+		<ee:transform doc:name="Set Correlation &amp; Idempotency Variables" doc:id="58e43232-4742-4ba4-a289-fc5990791c81" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="correlationId" ><![CDATA[
+attributes.headers.'x-correlation-id' default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="originalPayload" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="idempotencyKey" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.headers['x-idempotency-key']]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Log" doc:id="ed572265-7c7c-4566-adea-c3b4b155ca95" message='CorrelationId: #[vars.correlationId] Message: "Start Create order flow" Payload: #[payload] IdempotencyKey: #[vars.idempotencyKey]' />
+		<db:select doc:name="Check processed Order with Idempotency Key" doc:id="5546cf99-4d0c-45d5-8d01-5377811f0f7c" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT response_body
+FROM idempotency_records
+WHERE idempotency_key = :idempotencyKey]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	idempotencyKey: vars.idempotencyKey
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Order Already Processed" doc:id="3aaa62c1-a299-44fe-864d-220a8b95c1bd" >
+			<when expression="#[not isEmpty(payload)]">
+				<ee:transform doc:name="Parse Processed Order" doc:id="dbe19646-32b8-4968-826b-bff0eb5542b7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+read(payload[0].response_body as String, "application/json")]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="200" doc:name="Set Response Status " doc:id="efc2f5d8-a924-436f-a81b-754755957898" variableName="httpStatus" />
+			</when>
+			<otherwise >
+				<try doc:name="Transactional Try" doc:id="60148a8f-ca13-420b-83bf-e2cbd3b9697c" transactionalAction="ALWAYS_BEGIN">
+					<foreach doc:name="For Each" doc:id="a7b85062-2d0b-400c-86b3-0af9bef54d50" collection="#[vars.originalPayload.items]">
+						<db:select doc:name="Select Product Inventory" doc:id="6a8fb3e1-67e9-4daa-abee-9279f4554daf" config-ref="Database_Config" target="productInventory">
+							<db:sql ><![CDATA[SELECT i.id, i.available_quantity
+FROM inventory i INNER JOIN products p ON i.product_id = p.id
+WHERE p.sku = :sku
+
+]]></db:sql>
+							<db:input-parameters ><![CDATA[#[{
+	sku: payload.productId
+}]]]></db:input-parameters>
+						</db:select>
+						<choice doc:name="Check Stock Availability" doc:id="9fefd621-8fee-433a-b7dc-c26688b73aca">
+						<when expression="#[isEmpty(vars.productInventory) or vars.productInventory[0].available_quantity &lt; payload.quantity]">
+								<raise-error doc:name="Raise  INSUFFICIENT_STOCK Error" doc:id="32bc5901-76c0-4d04-aa57-7dc9879d49b9" type="CUSTOM:INSUFFICIENT_STOCK" description="Produt Stock is insufficient" />
+							</when>
+							<otherwise>
+								<db:update doc:name="Update Product Inventory" doc:id="ec76acef-89e9-4291-9f11-08918fde8778" config-ref="Database_Config">
+									<db:sql ><![CDATA[UPDATE inventory
+SET available_quantity = available_quantity - :qty, reserved_quantity = reserved_quantity + :qty
+WHERE id = :inventoryId
+
+]]></db:sql>
+									<db:input-parameters ><![CDATA[#[{
+	inventoryId: vars.productInventory[0].id,
+	qty: payload.quantity
+}]]]></db:input-parameters>
+								</db:update>
+							</otherwise>
+					</choice>
+					</foreach>
+					<set-variable value="#[vars.originalPayload.items map((item, index) -&gt; item.unitPrice * item.quantity)&#10;						   reduce ((value, acc = 0) -&gt; acc + value)]" doc:name="Compute Order Amount" doc:id="d7855530-7e47-4c25-abbd-806331d2199c" variableName="orderTotalAmount"/>
+					<db:insert doc:name="Insert Order" doc:id="fa5fa6ac-5cb6-4f42-953a-c60db9e38fc6" config-ref="Database_Config" autoGenerateKeys="true" target="insertedOrder">
+						<db:sql ><![CDATA[INSERT INTO orders(order_number, customer_id, status, total_amount, currency, created_at) VALUES
+(:orderNumber, :customerId, :status, :totalAmount, :currency, :createdAt)]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+	orderNumber: vars.originalPayload.orderId,
+	customerId: vars.originalPayload.customerId,
+	status: "CREATED",
+	totalAmount: vars.orderTotalAmount,
+	currency: vars.originalPayload.currency,
+	createdAt: now() as LocalDateTime
+}]]]></db:input-parameters>
+						<db:auto-generated-keys-column-names >
+							<db:auto-generated-keys-column-name value="id" />
+						</db:auto-generated-keys-column-names>
+					</db:insert>
+					<foreach doc:name="Insert Order Items" doc:id="1345daf7-60b2-48a9-a7bc-7cfa4873f3f1" collection="#[vars.originalPayload.items]">
+						<db:insert doc:name="Insert Order Item" doc:id="db86f3e5-17da-47ca-aaad-d12cfd5ea84e" config-ref="Database_Config">
+						<db:sql><![CDATA[INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price)
+SELECT :orderId, id, :quantity, :unitPrice, :totalPrice FROM products WHERE sku = :productSku]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	orderId: vars.insertedOrder.generatedKeys.id,
+	productSku: payload.productId,
+	quantity: payload.quantity,
+	unitPrice: payload.unitPrice,
+	totalPrice: payload.unitPrice * payload.quantity
+}]]]></db:input-parameters>
+					</db:insert>
+					</foreach>
+					<ee:transform doc:name="Prepare Response" doc:id="a234d3ee-0d07-49ed-9b52-232ee1cd35a3">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  orderId: "ORD-10001",
+  orderId: vars.originalPayload.orderId,
   status: "CREATED",
-  customerId: "CRM-001",
-  totalAmount: 2649.97,
-  currency: "EUR",
-  reservationId: "RES-88219",
-  items: [
-    {
-      productId: "PROD-001",
-      quantity: 2,
-      unitPrice: 1299.99,
-      totalPrice: 2599.98
-    }, 
-    {
-      productId: "PROD-002",
-      quantity: 1,
-      unitPrice: 49.99,
-      totalPrice: 49.99
-    }
-  ],
-  createAt: "2026-09-24T11:15:00Z"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+  customerId: vars.originalPayload.customerId,
+  totalAmount: vars.orderTotalAmount,
+  currency: vars.originalPayload.currency default "EUR",
+  items: vars.originalPayload.items map ((item) -> {
+    productId: item.productId,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    totalPrice: item.quantity * item.unitPrice
+  }),
+  createdAt: now()
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+					<db:insert doc:name="Store Idempotency Record" doc:id="add1d603-1383-4b18-97ec-b11a03b08703" config-ref="Database_Config" target="insertedIdempotencyRecord">
+						<db:sql ><![CDATA[INSERT INTO idempotency_records (idempotency_key, correlation_id, request_path, response_status, response_body, created_at) VALUES
+(:idempotencyKey, :correlationId, '/orders', 201, :requestBody, :createdAt)]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+	idempotencyKey: vars.idempotencyKey,
+	correlationId: vars.correlationId,
+	requestBody: write(payload, "application/json"),
+	createdAt: payload.createdAt as LocalDateTime
+}]]]></db:input-parameters>
+					</db:insert>
+				</try>
+				<set-variable value="201" doc:name="Set Response Status " doc:id="74ce87fe-125b-4e51-89d9-8360f9de0eed" variableName="httpStatus"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="End Log" doc:id="bbb9e67b-465b-4755-b471-feca6c280d70" message='CorrelationId: #[vars.correlationId] IdempotencyId: #[vars.idempotencyKey] Message: "End Create order flow"'/>
     </flow>
 	</mule>
