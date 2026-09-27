@@ -15,6 +15,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
     <apikit:config name="erp-system-sapi-config" api="erp-system-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
 	<configuration doc:name="Configuration" doc:id="95a9824f-5261-4610-9d96-ad9d42db4f67" defaultErrorHandler-ref="gloabl-errors-handler" />
 	<db:config name="Database_Config" doc:name="Database Config" doc:id="da0642f0-25eb-4541-8397-eea754627f5a" >
-		<db:generic-connection url="jdbc:postgresql://ep-flat-mud-b4uj4uj1-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&amp;channel_binding=require" driverClassName="org.postgresql.Driver" user="neondb_owner" password="npg_1F5ThLksrbVo" />
+		<db:generic-connection url="${db.url}" driverClassName="${db.driver_class_name}" user="${db.username}" password="${db.password}" />
 	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="8d6716cf-143b-464d-9bed-7500570c6ea2" file="dev.yaml" />
 </mule>
