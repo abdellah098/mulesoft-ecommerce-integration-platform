@@ -1,49 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	    <flow name="get:\orders\(orderId):erp-system-sapi-config">
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="Set CorrelationId &amp;  OrderId">
             <ee:variables>
-                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
+                <ee:set-variable variableName="orderId"><![CDATA[attributes.uriParams.'orderId']]></ee:set-variable>
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id' default uuid()]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <ee:transform doc:name="Transform Message">
+        <logger level="INFO" doc:name="Start Log" doc:id="2e2d0efe-3341-4fb0-ab21-9f325baca760" message='CorrelationId: #[vars.correlationId] OrderId:#[vars.orderId]  Message: "Start Get order by id flow"'/>
+		<db:select doc:name="Select Order" doc:id="64d2f8e6-0ba0-4ee0-ac61-52cf9354dba8" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT ord.customer_id,
+	   ord.status,
+	   ord.total_amount,
+	   ord.currency,
+	   ord.created_at,
+	   ord.updated_at,
+	   it.quantity,
+	   it.unit_price,
+	   it.total_price,
+	   p.name,
+	   p.sku
+FROM orders ord 
+     INNER JOIN order_items it ON ord.id = it.order_id 
+     INNER JOIN products p ON it.product_id = p.id
+WHERE ord.order_number = :orderNumber
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	orderNumber: vars.orderId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="is Order Present ?" doc:id="6b121d15-64e3-494f-a8ba-39cac9a8335b" >
+			<when expression="#[not isEmpty(payload)]">
+				<ee:transform doc:name="Set Response payload">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
+
+var firstRow = payload[0]
 ---
+ 
 {
-  orderId: "ORD-10001",
-  status: "CREATED",
-  customerId: "CRM-001",
-  totalAmount: 2649.97,
-  currency: "EUR",
-  items: [
-    {
-      productId: "PROD-001",
-      name: "Produc Name",
-      sku: "PROD-001",
-      quantity: 2,
-      unitPrice: 1299.99,
-      totalPrice: 2599.98
-    }, 
-    {
-      productId: "PROD-002",
-      name: "Mouse",
-      sku: "PROD-002",
-      quantity: 1,
-      unitPrice: 49.99,
-      totalPrice: 49.99
-    }
-  ],
-  createdAt: "2026-09-24T11:15:00Z",
-  updatedAt: "2026-09-24T11:15:00Z"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+  orderId: vars.orderId,
+  status: firstRow.status,
+  customerId: firstRow.customer_id,
+  totalAmount: firstRow.total_amount,
+  currency: firstRow.currency,
+  items: payload map ((row, index) -> {
+	  productId: row.sku,
+	  name: row.name,
+	  sku: row.sku,
+	  quantity: row.quantity,
+	  unitPrice: row.unit_price,
+	  totalPrice: row.total_price
+  }),
+  createdAt: firstRow.created_at,
+  updatedAt: firstRow.updated_at
+}]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+			</when>
+			<otherwise >
+				<raise-error doc:name="Raise CUSTOM:ORDER_NOT_FOUND error" doc:id="9ee90533-714c-4ab2-a793-c6c48513cc0f" type="CUSTOM:ORDER_NOT_FOUND" description="The requested Order is not found in the ERP System"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="End Log" doc:id="58b1dce2-0899-467e-8198-c6f34a172efc" message='CorrelationId: #[vars.correlationId] OrderId: #[vars.orderId] Message: "End get order by id flow" Payload: #[payload]'/>
     </flow>
 	</mule>

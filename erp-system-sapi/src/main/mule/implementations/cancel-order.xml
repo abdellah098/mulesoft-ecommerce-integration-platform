@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+<mule xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
 	    <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="4bd46629-68bf-46ff-b0db-59581b48ea65" />
 	<flow name="post:\orders\(orderId)\canccel:erp-system-sapi-config">
         <ee:transform doc:name="Set CorrelationId &amp;  orderId">
@@ -95,6 +96,7 @@ output application/json
 }]]]></db:input-parameters>
 							</db:insert>
 						</try>
+						<logger level="INFO" doc:name="End Log" doc:id="2cfbf61d-43a5-4def-99ce-1ba2e71fe33d" message='CorrelationId: #[vars.correlationId] IdempotencyKey: #[vars.idempotencyKey] OrderId: #[vars.orderId] Message: "Cancel Order flow Completed" Payload: #[payload]'/>
 					</otherwise>
 				</choice>
 			</otherwise>
