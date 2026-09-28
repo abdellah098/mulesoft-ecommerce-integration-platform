@@ -1,31 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	    <flow name="get:\products:erp-system-sapi-config">
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="Set CorrelationId &amp;  OrderId" doc:id="ade86499-7317-4964-9439-be4e0949d574">
+			<ee:variables>
+				<ee:set-variable variableName="correlationId"><![CDATA[attributes.headers.'x-correlation-id' default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="productIds" ><![CDATA[attributes.queryParams.'ids']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Log" doc:id="0a8c5871-2a9d-42b1-825b-5db0cb6be7a0" message='CorrelationId: #[vars.correlationId] ProductIds:#[vars.productIds]  Message: "Start Get Products by ids  flow"' />
+		<db:select doc:name="Select Products" doc:id="010d00bc-8117-4ca0-b500-2f4e45d8b3bd" config-ref="Database_Config">
+			<db:sql><![CDATA[SELECT p.sku,
+       p.name,
+       p.description,
+       unit_price,
+       p.status,
+       i.quantity_available, 
+       i.reserved_quantity
+FROM products p INNER JOIN iventory i
+WHERE sku IN :ids
+]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	orderNumber: vars.orderId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="eac0a3a1-6d15-4ab3-a3b4-db7767b4b34b">
+			<when expression="#[not isEmpty(payload)]">
+				<ee:transform doc:name="Transform Message">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-[
-  {
-    productId: "PROD-001",
-    name: "Sauvage Eau de Parfum 100ml",
-    description: "Dior - Eau de parfum aux notes boisées et épicées",
-    unitPrice: 1299.99,
-    currency: "EUR",
-    status: "ACTIVE",
+payload map ((row, index) -> {
+    productId: row.sku,
+    name: row.name,
+    description: row.description,
+    unitPrice: row.unit_price,
+    currency: row.currency,
+    status: row.status,
     inventory: {
-      availableQuantity: 8,
-      reservedQuantity: 2
+      availableQuantity: row.available_quantity,
+      reservedQuantity: row.reserved_quantity
     }
-  }
-] as Array {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+})]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+			</when>
+			<otherwise>
+				<raise-error doc:name="Raise CUSTOM:PRODUCT_NOT_FOUND error" doc:id="1b3d5ab1-1f23-4b82-93ad-7c167bc19d0d" type="CUSTOM:PRODUCT_NOT_FOUND" description="The requested products are not found in the ERP System" />
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="da056c04-812b-4c8e-84a3-146ee3e8d2b0" >
+				<ee:transform doc:name="Transform Message" doc:id="10feda66-6604-4fb2-a208-7ede776d2b90" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: 404,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
     </flow>
 	</mule>
