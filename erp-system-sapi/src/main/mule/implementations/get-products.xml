@@ -7,7 +7,7 @@
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	    <flow name="get:\products:erp-system-sapi-config">
-        <ee:transform doc:name="Set CorrelationId &amp;  OrderId" doc:id="ade86499-7317-4964-9439-be4e0949d574">
+        <ee:transform doc:name="Set CorrelationId &amp;  Products Ids" doc:id="ade86499-7317-4964-9439-be4e0949d574">
 			<ee:variables>
 				<ee:set-variable variableName="correlationId"><![CDATA[attributes.headers.'x-correlation-id' default uuid()]]></ee:set-variable>
 				<ee:set-variable variableName="productIds" ><![CDATA[attributes.queryParams.'ids']]></ee:set-variable>
@@ -15,19 +15,25 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 		</ee:transform>
 		<logger level="INFO" doc:name="Start Log" doc:id="0a8c5871-2a9d-42b1-825b-5db0cb6be7a0" message='CorrelationId: #[vars.correlationId] ProductIds:#[vars.productIds]  Message: "Start Get Products by ids  flow"' />
 		<db:select doc:name="Select Products" doc:id="010d00bc-8117-4ca0-b500-2f4e45d8b3bd" config-ref="Database_Config">
-			<db:sql><![CDATA[SELECT p.sku,
-       p.name,
-       p.description,
-       unit_price,
-       p.status,
-       i.quantity_available, 
-       i.reserved_quantity
-FROM products p INNER JOIN iventory i
-WHERE sku IN :ids
-]]></db:sql>
-			<db:input-parameters><![CDATA[#[{
-	orderNumber: vars.orderId
-}]]]></db:input-parameters>
+			<db:sql><![CDATA[#[
+    do {
+
+        var productList = read(vars.productIds, "application/json")  map (id) -> "'" ++ (id default "") ++ "'"
+        var inClause = productList joinBy ", "
+        ---
+        "SELECT
+            p.sku,
+            p.name,
+            p.description,
+            p.unit_price,
+            p.status,
+            i.available_quantity,
+            i.reserved_quantity
+        FROM products p
+        INNER JOIN inventory i ON i.product_id = p.id
+        WHERE p.sku IN (" ++ inClause ++ ")"
+    }
+]]]></db:sql>
 		</db:select>
 		<choice doc:name="Choice" doc:id="eac0a3a1-6d15-4ab3-a3b4-db7767b4b34b">
 			<when expression="#[not isEmpty(payload)]">
