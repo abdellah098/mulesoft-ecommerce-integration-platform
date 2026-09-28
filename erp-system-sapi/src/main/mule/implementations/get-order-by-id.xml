@@ -70,5 +70,26 @@ var firstRow = payload[0]
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="End Log" doc:id="58b1dce2-0899-467e-8198-c6f34a172efc" message='CorrelationId: #[vars.correlationId] OrderId: #[vars.orderId] Message: "End get order by id flow" Payload: #[payload]'/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="30e12418-06c7-4478-86ca-3b9e80a9d6b6" >
+				<ee:transform doc:name="Transform Message" doc:id="2c3bb56b-5fab-4ac6-98fa-3dbfa6a93062" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: 404,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
     </flow>
 	</mule>
