@@ -1,27 +1,160 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	    <flow name="post:\orders\(orderId)\canccel:erp-system-sapi-config">
-        <ee:transform doc:name="Transform Message">
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	    <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="4bd46629-68bf-46ff-b0db-59581b48ea65" />
+	<flow name="post:\orders\(orderId)\canccel:erp-system-sapi-config">
+        <ee:transform doc:name="Set CorrelationId &amp;  orderId">
             <ee:variables>
-                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
+                <ee:set-variable variableName="orderId"><![CDATA[attributes.uriParams.'orderId']]></ee:set-variable>
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers."x-correlation-id" default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="idempotencyKey" ><![CDATA[attributes.headers.'x-idempotency-key' default null]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <ee:transform doc:name="Transform Message">
+        <logger level="INFO" doc:name="Start Log" doc:id="acc197fc-61cf-4deb-9177-37d9f4d58c00" message='CorrelationId: #[vars.correlationId] idempotencyId: #[vars.idempotencyKey] OrderId: #[vars.orderId] Message: "Start Order cancelation flow"'/>
+		<try doc:name="Check Idempotency key" doc:id="62b61b5e-3d42-4da2-b973-fc744600da10" >
+			<validation:is-not-null doc:name="Idempotency Key is Present?" doc:id="8e31b008-5094-4fb1-928e-e8d19e580c52" config-ref="Validation_Config" value="#[vars.idempotencyKey]" message='#["Bad Request"]'/>
+		</try>
+		<db:select doc:name="Select Order Cancel Idempotency " doc:id="60113212-20a4-46ce-ac2a-7ad60ca9dea5" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT response_body FROM idempotency_records WHERE idempotency_key = :key]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	key: vars.idempotencyKey
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Is Order  Already Canceled" doc:id="8d12d7ad-15fe-49c2-a7dd-324994d3a02e" >
+			<when expression="#[not isEmpty(payload)]">
+				<ee:transform doc:name="Parse Idempotency Response body" doc:id="894e158b-95f7-415d-a7c7-47eaf33a5ab3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+read(payload[0].response_body, 'application/json')]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<db:select doc:name="Select Order To Cancel" doc:id="157df2f7-508c-4525-a55c-124bc27eebed" config-ref="Database_Config" target="orderDetail">
+					<db:sql ><![CDATA[SELECT ord.id AS order_id, ord.status, it.product_id, it.quantity
+FROM orders ord INNER JOIN order_items it ON ord.id = it.order_id
+WHERE order_number = : orderNumber]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	orderNumber: vars.orderId
+}]]]></db:input-parameters>
+				</db:select>
+				<choice doc:name="Choice" doc:id="98ba0baa-0ec1-4ab2-84ed-15939edce891" >
+					<when expression="#[isEmpty(vars.orderDetail)]">
+						<raise-error doc:name="Raise ORDER_NOT_FOUND Error" doc:id="89d77ccd-2a32-40a5-a011-b043d73e3cc5" type="CUSTOM:ORDER_NOT_FOUND" description="The requested Order is not found in the ERP System"/>
+					</when>
+					<when expression='#[vars.orderDetail[0].status != "CREATED"]'>
+						<raise-error doc:name="Raise ORDER_NOT_CANCELLABLE Error" doc:id="8f36eb21-fccb-4b84-b77c-471dc685ab2f" type="CUSTOM:ORDER_NOT_CANCELLABLE" description="The requested order can't be canceled"/>
+					</when>
+					<otherwise >
+						<try doc:name="Transactional Scope" doc:id="6a21a2a4-5149-4378-8f66-27befae5fab8" transactionalAction="ALWAYS_BEGIN">
+							<foreach doc:name="For Each Order Item" doc:id="3751c173-f980-4fb7-ab34-e6822f021ef6" collection="#[vars.orderDetail]">
+								<db:update doc:name="Update Product Inventory" doc:id="187064ea-f02c-4e96-9e6e-c199c5bfd456" config-ref="Database_Config">
+									<db:sql ><![CDATA[UPDATE inventory
+SET available_quantity = available_quantity + :qty, reserved_quantity = reserved_quantity + :qty
+WHERE porudct_id = :productId]]></db:sql>
+									<db:input-parameters ><![CDATA[#[{
+	qty: payload.quantity,
+	productId: payload.product_id
+}]]]></db:input-parameters>
+								</db:update>
+							</foreach>
+							<db:update doc:name="Update Order Status" doc:id="5f9ead09-66ca-469a-bae9-ab3961b4f911" config-ref="Database_Config">
+								<db:sql ><![CDATA[UPDATE orders
+SET status = 'CANCELED']]></db:sql>
+							</db:update>
+							<ee:transform doc:name="Set Response Payload">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  orderId: "ORD-10001",
-  status: "CANCELLED",
-  cancelledAt: "2026-09-24T11:20:00Z"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+  orderId: vars.orderId,
+  status: "CANCELED",
+  cancelledAt: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}
+}]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+							<db:insert doc:name="Insert Idempotency Recode" doc:id="5f2ae185-fa72-4947-bf6e-438aea86c460" config-ref="Database_Config">
+								<db:sql ><![CDATA[INSERT INTO idempotency_records (idempotency_key, correlation_id, request_path, response_status, response_body, created_at)
+VALUES(:key, corrId, '/cancel', 200, :responseBody', :createdAt)]]></db:sql>
+								<db:input-parameters ><![CDATA[#[{
+	key: vars.idempotencyKey,
+	corrId: vars.correlationId,
+	responseBody: write(payload, "application/json"),
+	createdAt: now() as LocalDateTime
+}]]]></db:input-parameters>
+							</db:insert>
+						</try>
+					</otherwise>
+				</choice>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="a688a887-dc7a-4cf8-89ff-573a9d3096b4" type="VALIDATION:NULL">
+				<ee:transform doc:name="Transform Message" doc:id="95f75354-27aa-4fd6-a67c-52518e9db2d5" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: 400,
+	message: "Bad Request",
+	description: "x-idempotency-key is missing",
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="502f32be-9e08-4e60-abe8-078eec960d07" type="CUSTOM:ORDER_NOT_FOUND">
+				<ee:transform doc:name="Transform Message" doc:id="c060e228-0d19-4b7d-bc48-6e6319fc2714" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: 404,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="61ba2339-5bdf-418d-a20f-3497b4d166df" type="CUSTOM:ORDER_NOT_CANCELLABLE" >
+				<ee:transform doc:name="Transform Message" doc:id="d48ade12-98b9-4840-b8aa-bf63433b7ce2" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: 422,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
     </flow>
 	</mule>
