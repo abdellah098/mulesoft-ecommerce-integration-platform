@@ -41,7 +41,7 @@ read(payload[0].response_body, 'application/json')]]></ee:set-payload>
 				<db:select doc:name="Select Order To Cancel" doc:id="157df2f7-508c-4525-a55c-124bc27eebed" config-ref="Database_Config" target="orderDetail">
 					<db:sql ><![CDATA[SELECT ord.id AS order_id, ord.status, it.product_id, it.quantity
 FROM orders ord INNER JOIN order_items it ON ord.id = it.order_id
-WHERE order_number = : orderNumber]]></db:sql>
+WHERE ord.order_number = :orderNumber]]></db:sql>
 					<db:input-parameters ><![CDATA[#[{
 	orderNumber: vars.orderId
 }]]]></db:input-parameters>
@@ -59,7 +59,7 @@ WHERE order_number = : orderNumber]]></db:sql>
 								<db:update doc:name="Update Product Inventory" doc:id="187064ea-f02c-4e96-9e6e-c199c5bfd456" config-ref="Database_Config">
 									<db:sql ><![CDATA[UPDATE inventory
 SET available_quantity = available_quantity + :qty, reserved_quantity = reserved_quantity + :qty
-WHERE porudct_id = :productId]]></db:sql>
+WHERE product_id = :productId]]></db:sql>
 									<db:input-parameters ><![CDATA[#[{
 	qty: payload.quantity,
 	productId: payload.product_id
@@ -68,7 +68,10 @@ WHERE porudct_id = :productId]]></db:sql>
 							</foreach>
 							<db:update doc:name="Update Order Status" doc:id="5f9ead09-66ca-469a-bae9-ab3961b4f911" config-ref="Database_Config">
 								<db:sql ><![CDATA[UPDATE orders
-SET status = 'CANCELED']]></db:sql>
+SET status = 'CANCELED'
+WHERE id = :orderId]]></db:sql>
+								<db:input-parameters ><![CDATA[#[{
+	orderId: vars.orderDetail[0].order_id}]]]></db:input-parameters>
 							</db:update>
 							<ee:transform doc:name="Set Response Payload">
             <ee:message>
@@ -82,11 +85,10 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-							<db:insert doc:name="Insert Idempotency Recode" doc:id="5f2ae185-fa72-4947-bf6e-438aea86c460" config-ref="Database_Config">
-								<db:sql ><![CDATA[INSERT INTO idempotency_records (idempotency_key, correlation_id, request_path, response_status, response_body, created_at)
-VALUES(:key, corrId, '/cancel', 200, :responseBody', :createdAt)]]></db:sql>
+							<db:insert doc:name="Insert Idempotency Recode" doc:id="5f2ae185-fa72-4947-bf6e-438aea86c460" config-ref="Database_Config" target="idempotencyRecord">
+								<db:sql ><![CDATA[INSERT INTO idempotency_records (idempotency_key, correlation_id, request_path, response_status, response_body, created_at) VALUES (:key, :corrId, '/cancel', 200, :responseBody, :createdAt)]]></db:sql>
 								<db:input-parameters ><![CDATA[#[{
-	key: vars.idempotencyKey,
+	key: vars.idempotencyKey as String,
 	corrId: vars.correlationId,
 	responseBody: write(payload, "application/json"),
 	createdAt: now() as LocalDateTime

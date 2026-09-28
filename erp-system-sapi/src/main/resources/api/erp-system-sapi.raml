@@ -47,7 +47,7 @@ types:
         orderId:
           type: string
           required: true
-          pattern: "^ORD-[0-9]-{1,6}$"
+          pattern: "^ORD-[0-9]{1,6}$"
       /canccel:
         post:
           is: [x-correlation-id, common-errors]
