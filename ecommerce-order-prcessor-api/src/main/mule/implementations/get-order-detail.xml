@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	    <flow name="get:\orders\(orderId)\details:e-commerce-process-papi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  orderId: "ORD-1000",
+  status: "CREATED",
+  totalAmount: 79.96,
+  customer: {
+    id: "9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e",
+    name: "Marc Lefevre",
+    active: true
+  },
+  currency: "EUR",
+  items: [
+    {
+      productId: "PROD-1033",
+      quantity: 4,
+      unitPrice: 19.99,
+      totalPrice: 79.96
+    }
+  ],
+  createdAt: "2026-09-28T16:30:00Z",
+  updatedAt: "2026-09-28T16:30:00Z"
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+	</mule>
