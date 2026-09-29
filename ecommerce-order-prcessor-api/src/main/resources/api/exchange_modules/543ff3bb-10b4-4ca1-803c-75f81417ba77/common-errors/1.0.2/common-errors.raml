@@ -1,0 +1,98 @@
+#%RAML 1.0 Trait
+
+responses:
+  400:
+    description: Invalid request or business input.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 400,
+            "message": "Bad Request",
+            "description": "Invalid request",
+            "correlationId": "7e4c9e11-3f12-4a89-9a81-28d1c7f0b5d2",
+            "dateTime": "2026-09-28T15:20:00Z"
+          }
+  401:
+    description: Authentication is required or the provided authentication credentials are invalid.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 401,
+            "message": "UNAUTHORIZED",
+            "description": "Authentication credentials are missing or invalid",
+            "correlationId": "1a8f3c22-6b41-4d7e-91c3-52e8f4a9d601",
+            "dateTime": "2026-09-28T15:21:00Z"
+          }
+
+  404:
+    description: Requested resource was not found.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 404,
+            "message": "RESOURCE_NOT_FOUND",
+            "description": "Product PROD-002 was not found",
+            "correlationId": "6f3b8c77-b096-42cd-e6b8-a7d3e9f4c156",
+            "dateTime": "2026-09-28T15:26:00Z"
+          }
+
+  406:
+    description: The requested representation is not acceptable according to the request's Accept headers.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 406,
+            "message": "NOT_ACCEPTABLE",
+            "description": "The requested response media type is not supported",
+            "correlationId": "2b9d4e33-7c52-4e8f-a2d4-63f9a5b0e712",
+            "dateTime": "2026-09-28T15:22:00Z"
+          }
+
+  415:
+    description: The request payload format or media type is not supported.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 415,
+            "message": "UNSUPPORTED_MEDIA_TYPE",
+            "description": "The request Content-Type 'text/xml' is not supported",
+            "correlationId": "3c0e5f44-8d63-4f9a-b3e5-74a0b6c1f823",
+            "dateTime": "2026-09-28T15:23:00Z"
+          }
+  500:
+    description: Unexpected internal error.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 500,
+            "message": "INTERNAL_SERVER_ERROR",
+            "description": "An unexpected internal error occurred",
+            "correlationId": "5e2a7b66-af85-41bc-d5a7-96c2d8e3b045",
+            "dateTime": "2026-09-28T15:25:00Z"
+          }
+
+  503:
+    description: The service is temporarily unavailable.
+    body:
+      application/json:
+        type: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+        example:
+          {
+            "code": 503,
+            "message": "SERVICE_UNAVAILABLE",
+            "description": "The Process API is temporarily unavailable",
+            "correlationId": "4d1f6a55-9e74-40ab-c4f6-85b1c7d2a934",
+            "dateTime": "2026-09-28T15:24:00Z"
+          }

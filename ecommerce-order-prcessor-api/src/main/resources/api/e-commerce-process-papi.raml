@@ -1,0 +1,107 @@
+#%RAML 1.0
+title: e-commerce-process-papi
+version: 1.0.0 
+baseUri: /api/v1/orders
+description: Process API responsible for orchestrating the end-to-end order lifecycle.
+protocols: 
+  - HTTPS 
+mediaType:
+  - application/json
+
+uses:
+  OrderLib: /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/order-library/1.0.0/order-library.raml
+
+types:
+  ErrorPayload: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/error-payload-datatype/1.0.0/error-payload-datatype.raml
+
+traits:
+    client-id-required: !include traits/client-id-enforcement-trait.raml
+    x-correlation-id: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/x-correlation-d/1.0.1/x-correlation-id.raml
+    x-idempotency-key: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/x-idempotency-key/1.0.0/x-idempotency-key.raml
+    common-errors: !include /exchange_modules/543ff3bb-10b4-4ca1-803c-75f81417ba77/common-errors/1.0.2/common-errors.raml
+    
+/orders:
+  post: 
+    displayName: CreateOrder 
+    description: Orchestrates the creation of an order. 
+    is:
+       - x-correlation-id 
+       - x-idempotency-key 
+       - common-errors 
+       - client-id-required
+    body: 
+      application/json: 
+        type: OrderLib.CreateOrderRequest
+        example: !include examples/create-order-request-payload.json
+    responses: 
+      201: 
+        description: Order successfully created. 
+        body: 
+          application/json: 
+            type: OrderLib.CreateOrderResponse
+            example: !include examples/create-order-response-payload.json
+      409:
+        description: Insufficient stock 
+        body:
+          application/json:
+            type: ErrorPayload
+            example:
+                  {
+                    "code": 409,
+                    "message": "INSUFFICIENT_STOCK",
+                    "description": "Insufficient stock for product PROD-002",
+                    "correlationId": "7e4c9e11-3f12-4a89-9a81-28d1c7f0b5d2",
+                    "dateTime": "2026-09-28T15:20:00Z"
+                  }
+  /{orderId}: 
+    uriParameters: 
+      orderId: 
+        description: Unique identifier of the order. 
+        type: string 
+        required: true 
+        example: "ORD-2026-000123"
+    /details:
+      get: 
+        displayName: GetOrderDetails
+        description: Returns a consolidated view of an order an customer info.
+        is: 
+          - x-correlation-id 
+          - common-errors
+          - client-id-required
+        responses: 
+          200: 
+            description: Order details successfully retrieved. 
+            body: 
+              application/json: 
+                type: OrderLib.OrderDetailResponse
+                example: !include examples/order-detail-payload.json
+
+    /cancel: 
+      post: 
+        displayName: CancelOrder
+        description: Orchestrates the cancellation of an existing order.
+        is: 
+          - x-correlation-id
+          - x-idempotency-key
+          - common-errors
+          - client-id-required
+        responses:
+          200:
+            description: Order successfully cancelled.
+            body: 
+              application/json:
+                type: OrderLib.OrderCancelledResponse
+                example: !include examples/order-cancelled-response-payload.json
+          409:
+            description: Insufficient stock 
+            body:
+              application/json:
+                type: ErrorPayload
+                example:
+                      {
+                        "code": 409,
+                        "message": "ORDER_NOT_CANCELLABLE",
+                        "description": "Order cannot be cancelled because its current status is DELIVERED",
+                        "correlationId": "7e4c9e11-3f12-4a89-9a81-28d1c7f0b5d2",
+                        "dateTime": "2026-09-28T15:20:00Z"
+                      }

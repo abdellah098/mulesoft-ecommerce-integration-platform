@@ -1,0 +1,21 @@
+{
+  "orderId": "ORD-1000",
+  "status": "CREATED",
+  "totalAmount": 79.96,
+  "customer": {
+    "id": "9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e",
+    "name": "Marc Lefevre",
+    "active": true
+  },
+  "currency": "EUR",
+  "items": [
+    {
+      "productId": "PROD-1033",
+      "quantity": 4,
+      "unitPrice": 19.99,
+      "totalPrice": 79.96
+    }
+  ],
+  "createdAt": "2026-09-28T16:30:00Z",
+   "updatedAt": "2026-09-28T16:30:00Z"
+}

@@ -1,0 +1,8 @@
+#%RAML 1.0 Trait
+
+headers:
+  x-idempotency-key:
+    description: Unique identifier used to guarantee idempotent processing of requests that create or cancel an order.
+    type: string
+    required: true
+    example: 8f1c4d92-231a-4288-9d21-99c011a0b3e1

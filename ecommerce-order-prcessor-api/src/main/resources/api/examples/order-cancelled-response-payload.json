@@ -1,0 +1,5 @@
+{
+  "orderId": "ORD-2026-000123",
+  "status": "CANCELLED",
+  "message": "Order cancelled successfully and stock restored"
+}
