@@ -1,0 +1,21 @@
+#%RAML 1.0 DataType
+type: object
+description: Summary information about an order.
+properties:
+  orderId:
+    type: string
+    required: true
+    pattern: "^ORD-[0-9]{1,6}$"
+    example: "ORD-1000"
+
+  status:
+    type: string
+    required: true
+    enum:
+      - CREATED
+      - SHIPPED
+      - CANCELLED
+
+  totalAmount:
+    type: number
+    required: true

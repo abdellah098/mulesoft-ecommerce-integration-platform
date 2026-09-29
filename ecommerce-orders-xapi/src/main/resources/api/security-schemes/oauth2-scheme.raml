@@ -1,0 +1,18 @@
+#%RAML 1.0 SecurityScheme
+type: OAuth 2.0
+description: Anypoint API Manager OAuth 2.0 Access Token Enforcement Policy.
+describedBy:
+  headers:
+    Authorization:
+      description: Jetons Bearer OAuth2 transmis par le consommateur externe.
+      type: string
+      pattern: "^Bearer .+$"
+      example: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+  responses:
+    401:
+      description: Jeton d'accès manquant, expiré ou invalide.
+      body:
+        application/json:
+          example:
+            code: "UNAUTHORIZED"
+            message: "Access token is invalid or expired."
