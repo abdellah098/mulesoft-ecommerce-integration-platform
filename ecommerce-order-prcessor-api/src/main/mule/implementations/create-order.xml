@@ -54,29 +54,6 @@ payload]]></ee:set-variable>
 		<logger level="INFO" doc:name="Log Process End" message='#[%dw 2.0 output application/json &#10;--- &#10;{&#10;	correlationId: vars.correlationId,&#10;	orderId: payload.orderId,&#10;	status: payload.status,&#10;	message: "Order creation completed successfully"&#10;}]'/>
 
 		<error-handler>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate - Custom Business Errors" type="VALIDATION:CUSTOMER_INACTIVE,VALIDATION:INVALID_PRODUCTS">
-				<ee:transform doc:name="Error Response">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	code: vars.httpStatus default 500,
-	message: error.errorType.identifier,
-	description: error.description,
-	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
-	correlationId: vars.correlationId
-}]]></ee:set-payload>
-					</ee:message>
-					<ee:variables>
-						<ee:set-variable variableName="httpStatus"><![CDATA[
-if (error.errorType.identifier == "CUSTOMER_INACTIVE") 422
-else if (error.errorType.identifier == "INVALID_PRODUCTS") 400
-else 500
-					]]></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3f9df9f7-5c9d-4ce1-b0e1-590b89e43724" type="MULE:COMPOSITE_ROUTING">
 				<ee:transform doc:name="Error Payload" doc:id="820d4fb7-906b-4807-8449-0cdc7679e4ed" >
 					<ee:message >
@@ -107,6 +84,25 @@ firstBussinessError default {
 					</ee:message>
 				</ee:transform>
 				<set-variable value="#[payload.code as Number default 500]" doc:name="Set HTTP Status" doc:id="da38f167-dc0e-4d08-9c62-19c54f7cf114" variableName="httpStatus"/>
+			</on-error-continue>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="84362175-addf-420f-bfa5-d05e8550a1b8" type="VALIDATION:CUSTOMER_INACTIVE,VALIDATION:INVALID_PRODUCTS">
+				<set-variable value='#[if (error.errorType.identifier == "CUSTOMER_INACTIVE") 422&#10;else if (error.errorType.identifier == "INVALID_PRODUCTS") 400&#10;else 500]' doc:name="Set HTTP Status" doc:id="00ccd536-5910-4326-adfd-ae60a73ece3c" variableName="httpStatus" />
+				<ee:transform doc:name="Error Response" doc:id="468b8680-7752-4e50-8d6f-0d4e77128ba6">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	code: vars.httpStatus,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables>
+					</ee:variables>
+				</ee:transform>
 			</on-error-continue>
 		</error-handler>
 	</flow>
@@ -140,9 +136,9 @@ output application/json
 	</sub-flow>
 
 	<sub-flow name="fetch-products-subflow">
-		<http:request doc:name="ERP - Get Products" config-ref="ERP_HTTP_Request_config" method="GET" path="/products">
+		<http:request doc:name="ERP - Get Products" config-ref="ERP_HTTP_Request_config" path="/products">
 			<http:headers><![CDATA[#[{
-				"x-correlation-id": vars.correlationId
+				"x-idempotency-key": vars.idempotencyKey
 			}]]]></http:headers>
 			<http:query-params><![CDATA[#[{
 				"ids": write(vars.originalPayload.items map $.productId, "application/json")
@@ -157,7 +153,6 @@ payload map (product) -> {
 	productId: product.productId as String,
 	name: product.name as String,
 	unitPrice: product.unitPrice as Number,
-	currency: product.currency as String,
 	status: product.status as String,
 	inventory: { 
 		availableQuantity: product.inventory.availableQuantity as Number,
@@ -201,7 +196,7 @@ requestedItems flatMap (item) -> do {
 
 		<choice doc:name="Check Validation Results">
 			<when expression="#[not isEmpty(vars.validationErrors)]">
-				<raise-error doc:name="Raise INVALID_PRODUCTS" type="VALIDATION:INVALID_PRODUCTS" description="#[vars.validationErrors]"/>
+				<raise-error doc:name="Raise INVALID_PRODUCTS" type="VALIDATION:INVALID_PRODUCTS" description="#[write(vars.validationErrors, 'application/json')]"/>
 			</when>
 		</choice>
 	</sub-flow>
