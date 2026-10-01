@@ -1,23 +1,234 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-	    <flow name="post:\orders:application\json:e-commerce-process-papi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+		http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<flow name="post:\orders:application\json:e-commerce-process-papi-config">
+		<ee:transform doc:name="Initialize Request Context" doc:id="da8f4621-ff14-47f8-b5c0-83da0f96ced2">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="originalPayload"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="correlationId"><![CDATA[attributes.headers['x-correlation-id'] default correlationId]]></ee:set-variable>
+				<ee:set-variable variableName="idempotencyKey"><![CDATA[attributes.headers['x-idempotency-key']]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+
+		<logger level="INFO" doc:name="Log Process Start" message='#[%dw 2.0 output application/json&#10;--- &#10;{&#10;	correlationId: vars.correlationId,&#10;	idempotencyKey: vars.idempotencyKey,&#10;	message: "Order creation started",&#10;	customerId: vars.originalPayload.customerId&#10;}]'/>
+
+		<scatter-gather doc:name="">
+			<route>
+				<flow-ref doc:name="Fetch Customer" name="fetch-customer-subflow"/>
+			</route>
+			<route>
+				<flow-ref doc:name="Fetch Products" name="fetch-products-subflow"/>
+			</route>
+		</scatter-gather>
+
+		<ee:transform doc:name="Extract Responses">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="customerData"><![CDATA[payload["0"].payload]]></ee:set-variable>
+				<ee:set-variable variableName="productsData"><![CDATA[payload["1"].payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+
+		<choice doc:name="Validate Customer Status">
+			<when expression='#[vars.customerData.status != "ACTIVE"]'>
+				<raise-error doc:name="Raise CUSTOMER_INACTIVE" type="VALIDATION:CUSTOMER_INACTIVE" description="Customer is not active"/>
+			</when>
+		</choice>
+
+		<flow-ref doc:name="Validate Products &amp; Stock" name="validate-products-subflow"/>
+
+		<flow-ref doc:name="Create Order in ERP" name="create-erp-order-subflow"/>
+
+		<logger level="INFO" doc:name="Log Process End" message='#[%dw 2.0 output application/json &#10;--- &#10;{&#10;	correlationId: vars.correlationId,&#10;	orderId: payload.orderId,&#10;	status: payload.status,&#10;	message: "Order creation completed successfully"&#10;}]'/>
+
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate - Custom Business Errors" type="VALIDATION:CUSTOMER_INACTIVE,VALIDATION:INVALID_PRODUCTS">
+				<ee:transform doc:name="Error Response">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  orderId: "ORD-2026-000123",
-  status: "CREATED",
-  totalAmount: 129.7,
-  message: "Order created successfully"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-	</mule>
+	code: vars.httpStatus default 500,
+	message: error.errorType.identifier,
+	description: error.description,
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+	correlationId: vars.correlationId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="httpStatus"><![CDATA[
+if (error.errorType.identifier == "CUSTOMER_INACTIVE") 422
+else if (error.errorType.identifier == "INVALID_PRODUCTS") 400
+else 500
+					]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3f9df9f7-5c9d-4ce1-b0e1-590b89e43724" type="MULE:COMPOSITE_ROUTING">
+				<ee:transform doc:name="Error Payload" doc:id="820d4fb7-906b-4807-8449-0cdc7679e4ed" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var firstBussinessError = 
+	(error.childErrors map (childError) -> 
+		if (childError.errorMessage.payload.error.code?)
+			childError.errorMessage.payload.error
+		else if (childError.errorMessage.payload.code?)
+			childError.errorMessage.payload
+		else 
+			null
+	  filter (err) -> err != null
+	  )[0]
+										
+---
+
+firstBussinessError default {
+  code: 500,
+  message: "Internal Server Error",
+  description: "An Unexpected error occurs. Please try later",
+  dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+  correlationId: vars.correlationId
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="#[payload.code as Number default 500]" doc:name="Set HTTP Status" doc:id="da38f167-dc0e-4d08-9c62-19c54f7cf114" variableName="httpStatus"/>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+
+
+	<sub-flow name="fetch-customer-subflow">
+		<http:request doc:name="CRM - Get Customer" config-ref="CRM_HTTP_Request_config" method="GET" path="/customers/{customerId}">
+			<http:headers><![CDATA[#[{
+				"x-correlation-id": vars.correlationId,
+				"x-idempotency-key": vars.idempotencyKey
+			}]]]></http:headers>
+			<http:uri-params><![CDATA[#[{
+				customerId: vars.originalPayload.customerId
+			}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Parse Customer Payload">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: payload.customer.id as String,
+	name: payload.customer.name as String, 
+	status: payload.customer.status as String,
+	isPartner: payload.customer.isPartner default false,
+	email: payload.customer.email as String,
+	phone: payload.customer.phone as String
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="fetch-products-subflow">
+		<http:request doc:name="ERP - Get Products" config-ref="ERP_HTTP_Request_config" method="GET" path="/products">
+			<http:headers><![CDATA[#[{
+				"x-correlation-id": vars.correlationId
+			}]]]></http:headers>
+			<http:query-params><![CDATA[#[{
+				"ids": write(vars.originalPayload.items map $.productId, "application/json")
+			}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Parse Products Payload">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map (product) -> { 
+	productId: product.productId as String,
+	name: product.name as String,
+	unitPrice: product.unitPrice as Number,
+	currency: product.currency as String,
+	status: product.status as String,
+	inventory: { 
+		availableQuantity: product.inventory.availableQuantity as Number,
+		reservedQuantity: product.inventory.reservedQuantity as Number
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="validate-products-subflow">
+		<ee:transform doc:name="Check Product Availability and Stock">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="validationErrors"><![CDATA[%dw 2.0
+output application/json
+
+var requestedItems = vars.originalPayload.items
+var fetchedProducts = vars.productsData
+
+---
+requestedItems flatMap (item) -> do {
+	var product = (fetchedProducts filter ($.productId == item.productId))[0]
+	---
+	if (product == null)
+		[{ productId: item.productId, reason: "PRODUCT_NOT_FOUND" }]
+	else if (product.status != "ACTIVE")
+		[{ productId: item.productId, reason: "PRODUCT_NOT_ACTIVE" }]
+	else if (product.inventory.availableQuantity < item.quantity)
+		[{ 
+			productId: item.productId, 
+			reason: "INSUFFICIENT_STOCK",
+			requestedQuantity: item.quantity,
+			availableQuantity: product.inventory.availableQuantity
+		}]
+	else
+		[]
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+
+		<choice doc:name="Check Validation Results">
+			<when expression="#[not isEmpty(vars.validationErrors)]">
+				<raise-error doc:name="Raise INVALID_PRODUCTS" type="VALIDATION:INVALID_PRODUCTS" description="#[vars.validationErrors]"/>
+			</when>
+		</choice>
+	</sub-flow>
+
+	<sub-flow name="create-erp-order-subflow">
+		<http:request doc:name="ERP - Post Order" config-ref="ERP_HTTP_Request_config" method="POST" path="/orders">
+			<http:body><![CDATA[#[vars.originalPayload]]]></http:body>
+			<http:headers><![CDATA[#[{
+  "x-idempotency-key": vars.idempotencyKey
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Format Success Response">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	orderId: payload.orderId,
+	status: payload.status,
+	totalAmount: payload.totalAmount,
+	message: "Order created successfully"
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="httpStatus"><![CDATA[201]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+
+</mule>

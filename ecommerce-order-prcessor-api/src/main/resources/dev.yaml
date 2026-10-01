@@ -1,0 +1,21 @@
+http:
+  protocol: "HTTP"
+  port: "8082"
+
+api:
+  erp:
+    host: "localhost"
+    port: "8081"
+    basePath: "/api/v1/erp"
+  crm:
+    host: "localhost"
+    port: "8080"
+    basePath: "/api/v1/crm"
+
+secure:
+  crm:
+    clientId: "acdb2d93-c684-4fc9-b9a6-13705ad5bfc8"
+    clientSecret: "38267af7-9672-432f-91ad-83c90f8ba1e8"
+  erp:
+    clientId: "013fbe37-0b08-451e-87b2-6dadae98b87e"
+    clientSecret: "c75b7456-23c3-4218-8c90-f2e7caad148f"

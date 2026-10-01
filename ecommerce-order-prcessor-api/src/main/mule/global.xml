@@ -8,7 +8,24 @@
 http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
 	    <http:listener-config name="e-commerce-process-papi-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8081" />
+        <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
     <apikit:config name="e-commerce-process-papi-config" api="e-commerce-process-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+   	    <http:request-config name="CRM_HTTP_Request_config" doc:name="HTTP Request config" doc:id="f9e07581-ed99-4723-98a9-ae0b54dc21e6" basePath="${api.crm.basePath}">
+		<http:request-connection host="${api.crm.host}" port="${api.crm.port}"/>
+		<http:default-headers >
+			<http:default-header key='#["x-correlation-id"]' value="#[vars.correlationId]" />
+			<http:default-header key='#["client-id"]' value="#[Mule::p('secure.erp.clientId')]" />
+			<http:default-header key='#["client-secret"]' value="#[Mule::p('secure.erp.clientSecret')]" />
+		</http:default-headers>
+	</http:request-config>
+	<http:request-config name="ERP_HTTP_Request_config" doc:name="HTTP Request config" doc:id="f5a81bb8-7547-460e-b25d-9aa2be58a23e" basePath="${api.erp.basePath}">
+		<http:request-connection host="${api.erp.host}" port="${api.erp.port}" />
+		<http:default-headers >
+			<http:default-header key='#["x-correlation-id"]' value="#[vars.correlationId]" />
+			<http:default-header key='#["client-id"]' value="#[Mule::p('secure.crm.clientId')]" />
+			<http:default-header key='#["client-secret"]' value="#[Mule::p('secure.crm.clientSecret')]" />
+		</http:default-headers>
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="5f8cac6d-b5f9-4d1e-bd0b-0ed837d83929" file="dev.yaml" />
 	</mule>
