@@ -1,3 +1,6 @@
+http:
+  port: "8081"
+
 db:
   url: "jdbc:postgresql://ep-flat-mud-b4uj4uj1-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
   driver_class_name: "org.postgresql.Driver"

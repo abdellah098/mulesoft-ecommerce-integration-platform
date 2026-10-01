@@ -61,6 +61,7 @@ payload map ((row, index) -> {
 				<raise-error doc:name="Raise CUSTOM:PRODUCT_NOT_FOUND error" doc:id="1b3d5ab1-1f23-4b82-93ad-7c167bc19d0d" type="CUSTOM:PRODUCT_NOT_FOUND" description="The requested products are not found in the ERP System" />
 			</otherwise>
 		</choice>
+		<logger level="INFO" doc:name="End Log" doc:id="16c3381b-d2b0-4fe7-97ef-e1afc543de97" message='CorrelationId: #[vars.correlationId] ProductIds: #[vars.productIds] Message: "Get Products Flow completed"'/>
 		<error-handler >
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="da056c04-812b-4c8e-84a3-146ee3e8d2b0" >
 				<ee:transform doc:name="Transform Message" doc:id="10feda66-6604-4fb2-a208-7ede776d2b90" >
