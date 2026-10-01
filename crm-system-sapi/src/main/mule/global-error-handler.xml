@@ -6,6 +6,7 @@
 	xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
 	        <sub-flow name="global-prepare-error-response-sub-flow" doc:id="1c47582e-3c6e-4714-816d-1ec738499f82" >
+		<logger level="INFO" doc:name="Logger" doc:id="3516c22b-f511-4a35-a63c-ec5b00a9b944" message="#[attributes.headers]"/>
 		<ee:transform doc:name="Set Error Payload">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
@@ -17,7 +18,7 @@ output application/xml
 		message: vars.message default error.errorType.identifier,
 		description: vars.description default error.description,
 		dateTime: now() as String {format: "dd-MM-yyyy'T'HH:mm'Z'"},
-		correlationId: vars.correlationId
+		correlationId: vars.correlationId default attributes.headers.'x-correlation-id'
 	}
 }]]></ee:set-payload>
                     </ee:message>

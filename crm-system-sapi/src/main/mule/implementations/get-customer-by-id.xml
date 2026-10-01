@@ -13,7 +13,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="transactionId" ><![CDATA[attributes.headers."x-transaction-id" default uuid()]]></ee:set-variable>
-				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id' default vars.customerId]]></ee:set-variable>
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id']]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<logger level="INFO" doc:name="Start Log" doc:id="91b12684-8c59-4d6c-b439-598056572aa5" message='TransactionId: #[vars.transactionId] CorrelationId: #[vars.correlationId] message: "Start get customer by id flow"' />
