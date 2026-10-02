@@ -1,27 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 	    <flow name="post:\orders\(orderId)\cancel:e-commerce-process-papi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="Initialize Request Context" doc:id="0cd0f6c4-94ad-47a8-b302-1cd5b772e493" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers['x-correlation-id'] default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="idempotencyKey" ><![CDATA[attributes.headers."x-idempotency-key"]]></ee:set-variable>
+				<ee:set-variable variableName="originalPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="orderId" ><![CDATA[attributes.uriParams.orderId]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Process Start" doc:id="cfe9a088-9653-40f0-be7f-74d2e1967b80" message='#[{&#10;	CorrelationId: vars.correlationId,&#10;	IdempotencyKey: vars.idempotencyKey,&#10;	orderId: vars.orderId,&#10;	Message: "Order cancellation started"&#10;}]'/>
+		<http:request doc:name="Post: Cancel Order" doc:id="b05ab407-17ee-4731-ae99-fdc77cecbf81" config-ref="ERP_HTTP_Request_config" method="POST" path='#["/orders/{orderId}/canccel"]'>
+			<http:headers ><![CDATA[#[{
+	"x-idempotency-key": vars.idempotencyKey
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[{
+	"orderId": vars.orderId
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Format Success Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  orderId: "ORD-2026-000123",
-  status: "CANCELLED",
+  orderId: vars.orderId,
+  status: payload.status as String,
   message: "Order cancelled successfully and stock restored"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+}]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+		<logger level="INFO" doc:name="Log Process Completed" doc:id="75dede31-245e-4a36-bcf5-e8e002e8dbd3" message='#[{&#10;	"CorrelationId": vars.correlationId,&#10;	"IdempotencyKey": vars.idempotencyKey,&#10;	"orderId": vars.orderId,&#10;	"Status": payload.status,&#10;	"Message": payload.message&#10;}]'/>
     </flow>
 	</mule>
