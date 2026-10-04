@@ -1,28 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 	    <flow name="get:\orders\(orderId)\detail:e-commerce-order-xapi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  orderId: "ORD-2026-000123",
-  status: "CREATED",
-  totalAmount: 129.7,
-  message: "Order created successfully"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+        <logger level="INFO" doc:name="Log Process Start" doc:id="d946b87c-0147-4e36-9f62-9b9b201e25db" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Start  Fetching Order detail"&#10;}]' />
+		<http:request doc:name="Get: Order Detail" doc:id="0c042fb3-7c69-47da-aa5b-8bd45fc49b10" config-ref="Order_Process_API_Config" path='#["/orders/{orderId/details"]'>
+			<http:uri-params ><![CDATA[#[{
+	"orderId": vars.orderId
+}]]]></http:uri-params>
+		</http:request>
+		<logger level="INFO" doc:name="Log Process Completed" doc:id="ca4f036d-e41a-49c3-b0b2-3bc1f634a166" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: vars.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Order detail retrieved successfully"&#10;}]' />
     </flow>
 	</mule>
