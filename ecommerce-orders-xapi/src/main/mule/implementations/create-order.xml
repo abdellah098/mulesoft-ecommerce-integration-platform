@@ -1,23 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-    <flow name="post:\orders:application\json:e-commerce-order-xapi-config">
-        <ee:transform doc:name="Transform Message">
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <http:request-config name="Order_Process_API_Config" doc:name="HTTP Request config" doc:id="c67ec089-d70d-4c4a-9423-bffe505ac36c" basePath="${api.orderProcessAPI.basePath}">
+		<http:request-connection host="${api.OrderProcessAPI.host}" port="${api.OrderProcessAPI.port}" />
+		<http:default-headers >
+			<http:default-header key='#["x-correlation-id"]' value="#[vars.correlationId]" />
+			<http:default-header key='"client_id"' value="${secure.orderProcessAPI.clientId}" />
+			<http:default-header key='#["client_secret"]' value='${secure.orderProcessAPI.clientSecret}' />
+		</http:default-headers>
+	</http:request-config>
+	<flow name="post:\orders:application\json:e-commerce-order-xapi-config">
+		<logger level="INFO" doc:name="Log Process Start" doc:id="006ee26e-ca81-4a9d-a70d-c18550751541" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	IdempotencyKey: vars.idempotencyKey,&#10;	Message: "Order successfully created"&#10;}]' />
+		<http:request doc:name="Post: Create Order" doc:id="ba167a84-2f38-4277-878c-437ef9752c30" method="POST" config-ref="Order_Process_API_Config" path='#["/orders"]'>
+			<http:headers ><![CDATA[#[output application/json
+---
+{
+	"x-idempotency-key" : vars.idempotencyKey
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{
-  orderId: "ORD-2026-000123",
-  status: "CREATED",
-  totalAmount: 129.7,
-  message: "Order created successfully"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+payload]]></ee:set-payload>
             </ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[201]]></ee:set-variable>
+			</ee:variables>
         </ee:transform>
+		<logger level="INFO" doc:name="Log Process Completed" doc:id="84b547e7-fa8a-4308-b55e-00f852f7ad14" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	Status: payload.status,&#10;	Message: "Order successfully created"&#10;}]' />
     </flow>
 	</mule>

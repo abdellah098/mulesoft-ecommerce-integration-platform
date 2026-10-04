@@ -11,7 +11,15 @@
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
             </http:error-response>
         </http:listener>
-        <apikit:router config-ref="e-commerce-order-xapi-config" />
+        <ee:transform doc:name="Initialize Request Context" doc:id="790af42f-3f85-45bb-85f5-e8e3c0fead64" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers.'x-correlation-id' default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="idempotencyKey" ><![CDATA[attributes.headers['x-dempotency-key']]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<apikit:router config-ref="e-commerce-order-xapi-config" />
     </flow>
     <flow name="e-commerce-order-xapi-console">
         <http:listener config-ref="e-commerce-order-xapi-httpListenerConfig" path="/console/*">

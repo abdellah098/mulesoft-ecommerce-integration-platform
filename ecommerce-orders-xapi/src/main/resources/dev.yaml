@@ -1,2 +1,13 @@
 http:
-  port: 8083
+  port: "8083"
+  
+api:
+  orderProcessAPI:
+    host: "localhost"
+    port: "8082"
+    basePath: "/api/v1"
+
+secure:
+  orderProcessAPI:
+    clientId: "a966c3f3-1aa1-4bd6-9f64-0d2847aa178e"
+    clientSecret: "54450e3c-6e5c-4ddd-b2f9-6b8fae6db381"
