@@ -1,42 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 	    <flow name="get:\orders\(orderId)\details:e-commerce-process-papi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="Initialize Request Context" doc:id="afd1758e-ac91-4ae2-a5b2-e48a3afd7f09" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="correlationId" ><![CDATA[attributes.headers['x-correlation-id'] default uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="orderId" ><![CDATA[attributes.uriParams.orderId]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Proccess Start" doc:id="9730bb54-d537-442c-930a-50e60b97887d" message='#[{&#10;	CorrelationId: vars.correlationId,&#10;	OrderId: vars.orderId,&#10;	Message: "Start fetching order detail"&#10;}]'/>
+		<http:request doc:name="Get: Order Detail" doc:id="967bd335-2a7a-44a6-a549-a4b08195f8fd" config-ref="ERP_HTTP_Request_config" path='#["/orders/{orderId}"]' target="orderDetail">
+			<http:uri-params ><![CDATA[#[{
+	orderId: vars.orderId
+}]]]></http:uri-params>
+		</http:request>
+		<http:request doc:name="Get: Customer Info" doc:id="08937ae6-7798-46de-9c74-84313a09ccb8" config-ref="CRM_HTTP_Request_config" path='#["/customers/{customerId}"]' target="customer">
+			<http:uri-params ><![CDATA[#[{
+	"customerId": vars.orderDetail.customerId as String
+}]]]></http:uri-params>
+		</http:request>
+        <ee:transform doc:name="Format Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  orderId: "ORD-1000",
-  status: "CREATED",
-  totalAmount: 79.96,
+  orderId: vars.orderId,
+  status: vars.orderDetail.status,
+  totalAmount: vars.orderDetail.totalAmount as Number,
   customer: {
-    id: "9a3d5c7e-1b2f-4d6a-8e9c-0f1a2b3c4d5e",
-    name: "Marc Lefevre",
-    active: true
+    id: vars.customer.customer.id,
+    name: vars.customer.customer.name,
+    active: vars.customer.customer.status
   },
-  currency: "EUR",
-  items: [
-    {
-      productId: "PROD-1033",
-      quantity: 4,
-      unitPrice: 19.99,
-      totalPrice: 79.96
-    }
-  ],
-  createdAt: "2026-09-28T16:30:00Z",
-  updatedAt: "2026-09-28T16:30:00Z"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+  currency: vars.orderDetail.currency,
+  items: vars.orderDetail.items map (item) -> {
+  	 productId: item.productId,
+      quantity: item.quantity as Number,
+      unitPrice: item.unitPrice as Number,
+      totalPrice: item.unitPrice as Number
+  },
+  createdAt: vars.orderDetail.createdAt,
+  updatedAt: vars.orderDetail.updatedAt
+} 
+]]></ee:set-payload>
             </ee:message>
         </ee:transform>
     </flow>

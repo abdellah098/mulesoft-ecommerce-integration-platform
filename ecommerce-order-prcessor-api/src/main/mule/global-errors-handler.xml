@@ -34,10 +34,24 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<flow-ref doc:name="Flow Reference" doc:id="fbac61c7-5f3d-4741-9054-1c615c2187c6" name="prepare-error-payload" />
 		</on-error-propagate>
 		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="480df7c2-2a35-4c77-971d-0708cac1e429" type="ANY" >
-			<set-variable value="#[500]" doc:name="Set HTTP Status -500" doc:id="cfa1bbc4-91dc-44b3-af36-efe3cb134ec5" variableName="httpStatus" />
-			<set-variable value='#["Internal Server Error"]' doc:name="Set Error Message" doc:id="12af1142-0555-48e4-8f3c-0f4110e87068" variableName="message" />
-			<set-variable value='#["An unexpected error occurs on the server"]' doc:name="set Error Description" doc:id="f8915147-b869-4171-ab75-7420e9d24d9d" variableName="description" />
-			<flow-ref doc:name="Flow Reference" doc:id="61131140-d62b-43e0-b88d-8d46b9a034af" name="prepare-error-payload" />
+			<set-variable value="#[if (error.errorMessage.payload.code?)&#10;	error.errorMessage.payload.code as Number&#10;else&#10;	500]" doc:name="Set HTTP Status" doc:id="7864b74e-bc45-46ef-a765-83e47567be73" variableName="httpStatus" />
+			<ee:transform doc:name="Set Error Payload" doc:id="2d041a6a-452a-4859-8250-227551732344" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if (error.errorMessage.payload.code?)
+	error.errorMessage.payload
+else
+  {
+	code: vars.httpStatus,
+	message: vars.message default "Internal Server Error",
+	description: vars.description default "An unexpected error occurs on the server. Please contact the support team",
+	dateTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+	"correlationId": vars.correlationId default attributes.headers.'x-correlation-id'
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
 		</on-error-propagate>
 	</error-handler>
 	<sub-flow name="prepare-error-payload" doc:id="23c294d3-bb11-4975-a065-9d7903268995" >
