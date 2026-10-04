@@ -90,8 +90,8 @@ securedBy: [ oauth2 ]
             description: Order details successfully retrieved.
             body: 
               application/json: 
-                type: OrderLib.CreateOrderResponse
-                example: !include examples/create-order-response-payload.json
+                type: OrderLib.OrderDetailResponse
+                example: !include examples/order-detail-payload.json
 
     /cancel: 
       post: 
