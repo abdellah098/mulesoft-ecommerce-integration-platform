@@ -11,4 +11,14 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
         <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
     <apikit:config name="e-commerce-order-xapi-config" api="e-commerce-order-xapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<configuration-properties doc:name="Configuration properties" doc:id="20282e98-591b-4f80-94e5-fc0c4c722f55" file="dev.yaml" />
+	<configuration doc:name="Configuration" doc:id="7f1bca96-f352-4c08-bc19-5824e1cd89d8" defaultErrorHandler-ref="global-errors-handler" />
+	    <http:request-config name="Order_Process_API_Config" doc:name="HTTP Request config" doc:id="dfd26b6e-f0f3-431f-9467-8cb8c0a54600" basePath="${api.orderProcessAPI.basePath}">
+		<http:request-connection host="${api.orderProcessAPI.host}" port="${api.orderProcessAPI.port}" />
+		<http:default-headers >
+			<http:default-header key='#["x-correlation-id"]' value="#[vars.correlationId]" />
+			<http:default-header key='#["client_id"]' value="${secure.orderProcessAPI.clientId}" />
+			<http:default-header key='#["client_secret"]' value='${secure.orderProcessAPI.clientSecret}' />
+		</http:default-headers>
+	</http:request-config>
 	</mule>

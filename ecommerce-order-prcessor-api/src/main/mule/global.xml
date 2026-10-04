@@ -28,4 +28,5 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		</http:default-headers>
 	</http:request-config>
 	<configuration-properties doc:name="Configuration properties" doc:id="5f8cac6d-b5f9-4d1e-bd0b-0ed837d83929" file="dev.yaml" />
+	<configuration doc:name="Configuration" doc:id="b649cf4b-c55b-4ebc-ac3f-a952d12b3314" defaultErrorHandler-ref="global-errors-handler" />
 	</mule>

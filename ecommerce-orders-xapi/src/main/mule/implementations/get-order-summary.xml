@@ -7,13 +7,14 @@
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 	    <flow name="get:\orders\(orderId):e-commerce-order-xapi-config">
-        <logger level="INFO" doc:name="Log Process Start" doc:id="ebd9dc28-8d47-4ae5-8121-9c952567f3fd" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Start  fetching order summary"&#10;}]' />
-        <http:request doc:name="Get: Order Detail" doc:id="8f42f7c7-5324-4e49-bd78-781b9a4bb09c" config-ref="Order_Process_API_Config" path='#["/orders/{orderId/details"]'>
+        <set-variable value="#[attributes.uriParams.orderId]" doc:name="Set OrderId" doc:id="3e1065a6-7a30-4347-aa6f-7e9c9e8d3f2e" variableName="orderId" />
+		<logger level="INFO" doc:name="Log Process Start" doc:id="ebd9dc28-8d47-4ae5-8121-9c952567f3fd" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: vars.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Start  fetching order summary"&#10;}]' />
+		<http:request doc:name="Get: Order Detail" doc:id="8f42f7c7-5324-4e49-bd78-781b9a4bb09c" config-ref="Order_Process_API_Config" path='#["/orders/{orderId}/details"]'>
 			<http:uri-params><![CDATA[#[{
 	"orderId": vars.orderId
 }]]]></http:uri-params>
 		</http:request>
-		<ee:transform doc:name="Transform Message">
+		<ee:transform doc:name="Format Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -25,6 +26,6 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-		<logger level="INFO" doc:name="Log Process Completed" doc:id="416eb631-a1b0-43d6-91fe-ef950d6fdd63" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: vars.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Order detail retrieved successfully"&#10;}]' />
+		<logger level="INFO" doc:name="Log Process Completed" doc:id="416eb631-a1b0-43d6-91fe-ef950d6fdd63" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: vars.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	Message: "Order summary retrieved successfully"&#10;}]' />
     </flow>
 	</mule>

@@ -6,20 +6,10 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-    <http:request-config name="Order_Process_API_Config" doc:name="HTTP Request config" doc:id="c67ec089-d70d-4c4a-9423-bffe505ac36c" basePath="${api.orderProcessAPI.basePath}">
-		<http:request-connection host="${api.OrderProcessAPI.host}" port="${api.OrderProcessAPI.port}" />
-		<http:default-headers >
-			<http:default-header key='#["x-correlation-id"]' value="#[vars.correlationId]" />
-			<http:default-header key='"client_id"' value="${secure.orderProcessAPI.clientId}" />
-			<http:default-header key='#["client_secret"]' value='${secure.orderProcessAPI.clientSecret}' />
-		</http:default-headers>
-	</http:request-config>
 	<flow name="post:\orders:application\json:e-commerce-order-xapi-config">
 		<logger level="INFO" doc:name="Log Process Start" doc:id="006ee26e-ca81-4a9d-a70d-c18550751541" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	IdempotencyKey: vars.idempotencyKey,&#10;	Message: "Start Order creation process"&#10;}]' />
 		<http:request doc:name="Post: Create Order" doc:id="ba167a84-2f38-4277-878c-437ef9752c30" method="POST" config-ref="Order_Process_API_Config" path='#["/orders"]'>
-			<http:headers ><![CDATA[#[output application/json
----
-{
+			<http:headers ><![CDATA[#[{
 	"x-idempotency-key" : vars.idempotencyKey
 }]]]></http:headers>
 		</http:request>
