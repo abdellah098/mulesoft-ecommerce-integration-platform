@@ -15,7 +15,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		</http:default-headers>
 	</http:request-config>
 	<flow name="post:\orders:application\json:e-commerce-order-xapi-config">
-		<logger level="INFO" doc:name="Log Process Start" doc:id="006ee26e-ca81-4a9d-a70d-c18550751541" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	IdempotencyKey: vars.idempotencyKey,&#10;	Message: "Order successfully created"&#10;}]' />
+		<logger level="INFO" doc:name="Log Process Start" doc:id="006ee26e-ca81-4a9d-a70d-c18550751541" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	CorrelationId: vars.correlationId,&#10;	IdempotencyKey: vars.idempotencyKey,&#10;	Message: "Start Order creation process"&#10;}]' />
 		<http:request doc:name="Post: Create Order" doc:id="ba167a84-2f38-4277-878c-437ef9752c30" method="POST" config-ref="Order_Process_API_Config" path='#["/orders"]'>
 			<http:headers ><![CDATA[#[output application/json
 ---
@@ -23,17 +23,6 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 	"x-idempotency-key" : vars.idempotencyKey
 }]]]></http:headers>
 		</http:request>
-		<ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-            </ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="httpStatus" ><![CDATA[201]]></ee:set-variable>
-			</ee:variables>
-        </ee:transform>
 		<logger level="INFO" doc:name="Log Process Completed" doc:id="84b547e7-fa8a-4308-b55e-00f852f7ad14" message='#[output application/json&#10;---&#10;&#10;{&#10;	OrderId: payload.orderId,&#10;	Status: payload.status,&#10;	Message: "Order successfully created"&#10;}]' />
     </flow>
 	</mule>
