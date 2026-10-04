@@ -41,6 +41,6 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-		<logger level="INFO" doc:name="Log Process Completed" doc:id="75dede31-245e-4a36-bcf5-e8e002e8dbd3" message='#[{&#10;	"CorrelationId": vars.correlationId,&#10;	"IdempotencyKey": vars.idempotencyKey,&#10;	"orderId": vars.orderId,&#10;	"Status": payload.status,&#10;	"Message": payload.message&#10;}]'/>
+		<logger level="INFO" doc:name="Log Process Completed" doc:id="75dede31-245e-4a36-bcf5-e8e002e8dbd3" message='#[output application/json&#10;---&#10;{&#10;	"CorrelationId": vars.correlationId,&#10;	"IdempotencyKey": vars.idempotencyKey,&#10;	"orderId": vars.orderId,&#10;	"Status": payload.status,&#10;	"Message": payload.message&#10;}]'/>
     </flow>
 	</mule>
